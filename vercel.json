@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "app/api/delete/route.ts": {
+      "maxDuration": 60
+    }
+  }
+}
