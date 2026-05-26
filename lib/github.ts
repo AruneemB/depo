@@ -21,9 +21,9 @@ export async function listPublicRepos(token: string): Promise<Repo[]> {
     description: r.description ?? null,
     fork: r.fork,
     stargazerCount: r.stargazers_count ?? 0,
-    updatedAt: r.updated_at ?? new Date().toISOString(),
+    updatedAt: r.updated_at ?? null,
     url: r.html_url,
-    visibility: (r.visibility ?? 'public') as 'public' | 'private',
+    visibility: r.visibility as 'public' | 'private',
   }))
 }
 
