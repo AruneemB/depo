@@ -1,4 +1,4 @@
-import { createOctokit, listPublicRepos } from '@/lib/github'
+import { createOctokit, listPublicRepos, deleteRepo } from '@/lib/github'
 
 jest.mock('@octokit/rest', () => {
   return {
@@ -91,5 +91,20 @@ describe('listPublicRepos()', () => {
     mockOctokit.paginate.mockResolvedValue(manyRepos)
     const repos = await listPublicRepos('tok')
     expect(repos).toHaveLength(250)
+  })
+})
+
+describe('deleteRepo()', () => {
+  it('calls octokit.repos.delete with owner and repo', async () => {
+    await deleteRepo('tok', 'alice', 'my-project')
+    expect(mockOctokit.repos.delete).toHaveBeenCalledWith({
+      owner: 'alice',
+      repo: 'my-project',
+    })
+  })
+
+  it('propagates errors from octokit.repos.delete', async () => {
+    mockOctokit.repos.delete.mockRejectedValueOnce(new Error('Not found'))
+    await expect(deleteRepo('tok', 'alice', 'ghost-repo')).rejects.toThrow('Not found')
   })
 })
