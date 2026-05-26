@@ -86,6 +86,18 @@ describe('listPublicRepos()', () => {
     expect(repos[0].stargazerCount).toBe(0)
   })
 
+  it('maps null updatedAt when raw updated_at is null', async () => {
+    mockOctokit.paginate.mockResolvedValue([{ ...rawRepo, updated_at: null }])
+    const repos = await listPublicRepos('tok')
+    expect(repos[0].updatedAt).toBeNull()
+  })
+
+  it('passes visibility through directly without fabricating a default', async () => {
+    mockOctokit.paginate.mockResolvedValue([{ ...rawRepo, visibility: 'private' }])
+    const repos = await listPublicRepos('tok')
+    expect(repos[0].visibility).toBe('private')
+  })
+
   it('returns all pages (paginate handles this automatically)', async () => {
     const manyRepos = Array.from({ length: 250 }, (_, i) => ({ ...rawRepo, id: i, name: `repo-${i}`, full_name: `alice/repo-${i}` }))
     mockOctokit.paginate.mockResolvedValue(manyRepos)
