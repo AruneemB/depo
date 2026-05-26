@@ -26,3 +26,12 @@ export async function listPublicRepos(token: string): Promise<Repo[]> {
     visibility: (r.visibility ?? 'public') as 'public' | 'private',
   }))
 }
+
+export async function deleteRepo(
+  token: string,
+  owner: string,
+  repo: string,
+): Promise<void> {
+  const octokit = createOctokit(token)
+  await octokit.repos.delete({ owner, repo })
+}
