@@ -27,19 +27,19 @@ describe('middleware', () => {
     it('redirects /repos to /', async () => {
       const response = await middleware(makeRequest('/repos'))
       expect(response.status).toBe(307)
-      expect(response.headers.get('location')).toContain('/')
+      expect(new URL(response.headers.get('location')!).pathname).toBe('/')
     })
 
     it('redirects /confirm to /', async () => {
       const response = await middleware(makeRequest('/confirm'))
       expect(response.status).toBe(307)
-      expect(response.headers.get('location')).toContain('/')
+      expect(new URL(response.headers.get('location')!).pathname).toBe('/')
     })
 
     it('redirects /done to /', async () => {
       const response = await middleware(makeRequest('/done'))
       expect(response.status).toBe(307)
-      expect(response.headers.get('location')).toContain('/')
+      expect(new URL(response.headers.get('location')!).pathname).toBe('/')
     })
   })
 
