@@ -1,41 +1,3 @@
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
-
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# env files — ignore all variants, explicitly keep .env.example tracked
-.env
-.env.*
-.env.local
-.env*.local
-!.env.example
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-# playwright
-tests/e2e/test-results/
-tests/e2e/playwright-report/
-
 # Tool/editor directories
 .claude
 .vscode
@@ -45,3 +7,41 @@ tests/e2e/playwright-report/
 
 # Project docs (non-source)
 docs-depo/
+
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# Testing
+/coverage
+
+# Next.js
+/.next/
+/out/
+
+# Production
+/build
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment
+.env
+.env.*
+.env.local
+.env*.local
+!.env.example
+
+# Vercel
+.vercel
+
+# Typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# Playwright
+tests/e2e/test-results/
+tests/e2e/playwright-report/
