@@ -64,6 +64,15 @@ describe('middleware', () => {
     })
   })
 
+  describe('session retrieval error', () => {
+    it('redirects to / when getIronSession throws', async () => {
+      mockGetIronSession.mockRejectedValue(new Error('corrupted cookie'))
+      const response = await middleware(makeRequest('/repos'))
+      expect(response.status).toBe(307)
+      expect(new URL(response.headers.get('location')!).pathname).toBe('/')
+    })
+  })
+
   describe('public paths (no session check needed)', () => {
     it('passes / through without checking session', async () => {
       await middleware(makeRequest('/'))

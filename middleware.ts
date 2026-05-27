@@ -10,12 +10,15 @@ export async function middleware(request: NextRequest) {
 
   if (PROTECTED.some(path => pathname === path || pathname.startsWith(`${path}/`))) {
     const response = NextResponse.next()
-    const session = await getIronSession<SessionData>(request, response, sessionOptions)
-
-    if (!session.accessToken) {
+    try {
+      const session = await getIronSession<SessionData>(request, response, sessionOptions)
+      if (!session.accessToken) {
+        return NextResponse.redirect(new URL('/', request.url))
+      }
+    } catch {
+      // Corrupted or unreadable cookie — treat as unauthenticated
       return NextResponse.redirect(new URL('/', request.url))
     }
-
     return response
   }
 
