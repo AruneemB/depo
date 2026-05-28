@@ -15,19 +15,22 @@ User
  │                                      │
  │                                      └── Sets session cookie, redirects ──►
  │
- ├── GET /repos               Repo list — fetch, filter, select
+ ├── GET /repos  ──► middleware: validate depo_session cookie
+ │        │              │
+ │        │         no accessToken / corrupted cookie ──► redirect to /
  │        │
  │        ├── GET /api/repos  (server-side, reads session cookie)
  │        │
  │        └── "Continue" ──── saves selection to sessionStorage ──►
  │
- ├── GET /confirm             Review + output mode + confirmation gate
+ ├── GET /confirm  ──► middleware (same check)
  │        │
  │        ├── POST /api/delete  (if "Delete in app" mode)
  │        │
  │        └── Saves results to sessionStorage ──►
  │
- └── GET /done                Summary of deleted / failed repos
+ └── GET /done  ──► middleware (same check)
+                    Summary of deleted / failed repos
 ```
 
 ---
@@ -55,6 +58,20 @@ The server/client split is intentional: pages that need `sessionStorage` or inte
 | `POST` | `/api/signout` | None | Destroy session cookie, redirect to `/` |
 
 See [API.md](API.md) for full request/response documentation.
+
+---
+
+## Middleware
+
+`middleware.ts` runs at the Next.js edge before any server component or API route handler on the protected paths.
+
+**Protected paths**: `/repos`, `/confirm`, `/done` and all sub-paths (matched via `'/repos/:path*'`, `'/confirm/:path*'`, `'/done/:path*'`).
+
+**Auth check**: reads the `depo_session` cookie using `getIronSession`. If `session.accessToken` is falsy, returns a `307` redirect to `/`. If the cookie exists but is corrupted or unreadable (tampered or encrypted with a different secret), the decryption error is caught and the middleware still redirects to `/`.
+
+**Path matching precision**: the `:path*` matcher patterns prevent false-positive matches on paths such as `/repos-test` or `/confirm-email`.
+
+**Note**: `/api/repos` and `/api/delete` perform their own independent session checks and return `401` for unauthenticated API calls. The middleware is a first-line guard for page routes only.
 
 ---
 
@@ -131,7 +148,10 @@ depo/
 │   └── generateCommand.ts          gh/curl command string builder
 │
 ├── middleware.ts                   Redirect unauthenticated users from protected routes
+│                                   (matcher: /repos/:path*, /confirm/:path*, /done/:path*)
 ├── docs/                           This documentation
 ├── docs-depo/                      Internal spec and implementation guide
 └── config/                         Jest, Playwright, Tailwind configuration
 ```
+
+**`next.config.ts`**: written in TypeScript (not `.mjs`). Configured with `images.domains: ['avatars.githubusercontent.com']` to allow Next.js image optimization for GitHub user avatars.
