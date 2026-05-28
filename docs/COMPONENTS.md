@@ -155,7 +155,7 @@ interface Repo {
   description: string | null
   fork: boolean
   stargazerCount: number
-  updatedAt: string     // ISO 8601
+  updatedAt: string | null
   url: string
   visibility: 'public' | 'private'
 }
@@ -192,6 +192,14 @@ SESSION_KEY_OAUTH_STATE = 'depo:oauth_state'
 
 Exports the `iron-session` configuration and the `SessionData` type. Kept separate from `lib/session.ts` so that API routes and server components can import the options without pulling in `next/headers`.
 
+`lib/sessionOptions.ts` also validates `SESSION_SECRET` at **module load time**: if `process.env.SESSION_SECRET` is absent or empty, the module throws immediately:
+
+```
+Error: SESSION_SECRET environment variable is required
+```
+
+This fail-fast behaviour prevents a misconfigured deployment from serving requests with a broken or empty encryption key that would make session cookies trivially forgeable.
+
 ---
 
 ### `lib/session.ts`
@@ -209,7 +217,7 @@ Thin wrapper around `getIronSession` that reads from `next/headers`. Used only i
 | Export | Signature | Notes |
 |--------|-----------|-------|
 | `createOctokit` | `(token: string) => Octokit` | Creates an authenticated Octokit instance |
-| `listPublicRepos` | `(token: string) => Promise<Repo[]>` | Fetches all pages via `octokit.paginate`, maps to internal `Repo` type |
+| `listPublicRepos` | `(token: string) => Promise<Repo[]>` | Fetches all pages via `octokit.paginate`. Query parameters: `type: 'owner'`, `visibility: 'public'`, `sort: 'updated'`, `direction: 'desc'`, `per_page: 100`. Maps raw Octokit fields to the internal `Repo` type. |
 | `deleteRepo` | `(token, owner, repo) => Promise<void>` | Single repo deletion; throws on error |
 
 ---
@@ -226,3 +234,5 @@ Builds a shell command string for the given repos and mode.
 
 - **`gh` mode**: one `gh repo delete owner/repo --yes` line per repo
 - **`curl` mode**: sets a `TOKEN="<your-token>"` variable followed by one `curl -X DELETE` call per repo; uses `-w "%{http_code} REPONAME\n"` to print the HTTP status code next to each repo name so failures are easy to spot
+- **Empty repos array**: returns `''` immediately without validating `owner`
+- **Input validation**: `owner` is checked against `/^[A-Za-z0-9](?:-?[A-Za-z0-9]){0,38}$/`; each repo name against `/^[A-Za-z0-9._-]+$/`. Violations throw `'Invalid GitHub owner'` or `'Invalid repository name: <name>'`. This blocks shell-injection characters (spaces, semicolons, `$(…)`) from appearing in the generated command string.
