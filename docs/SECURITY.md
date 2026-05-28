@@ -16,6 +16,18 @@ The GitHub OAuth access token is stored exclusively in an `iron-session` encrypt
 
 ---
 
+## SESSION_SECRET Startup Validation
+
+`lib/sessionOptions.ts` reads `process.env.SESSION_SECRET` at **module load time** — outside any function, at the top level of the module. If the variable is absent or empty, the module throws immediately:
+
+```
+Error: SESSION_SECRET environment variable is required
+```
+
+A deployment that starts without `SESSION_SECRET` set will crash before serving any requests. It cannot silently fall back to an empty or predictable encryption password that would make all session cookies trivially forgeable. This is a defense-in-depth measure: even if infrastructure configuration is incorrect, the application refuses to run in a broken security state.
+
+---
+
 ## CSRF Protection on OAuth Callback
 
 The OAuth flow uses a state parameter to prevent [CSRF attacks on the authorization callback](https://datatracker.ietf.org/doc/html/rfc6749#section-10.12):
@@ -27,6 +39,16 @@ The OAuth flow uses a state parameter to prevent [CSRF attacks on the authorizat
 5. On successful validation, the `depo_oauth_state` cookie is deleted.
 
 This ensures that only the browser that initiated the sign-in flow can complete it.
+
+---
+
+## Protected Route Middleware
+
+Next.js middleware (`middleware.ts`) enforces authentication at the routing layer, before any server component or API route handler executes on the protected paths.
+
+- **Protected paths**: `/repos`, `/confirm`, `/done` and all sub-paths. Any request to these routes without a valid `depo_session` cookie containing an `accessToken` is redirected to `/` with a `307`.
+- **Corrupted cookie handling**: if the `depo_session` cookie exists but cannot be decrypted (tampered, truncated, or encrypted with a different secret), the middleware catches the `getIronSession` error and redirects to `/` rather than propagating the exception. This prevents a malformed cookie from reaching protected page logic.
+- **Defense in depth**: the middleware redirect is a first-line guard. API routes (`/api/repos`, `/api/delete`) independently validate the session and return `401` for unauthenticated or revoked tokens.
 
 ---
 
