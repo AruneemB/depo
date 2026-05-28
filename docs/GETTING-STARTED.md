@@ -79,6 +79,14 @@ Visit [http://localhost:3000](http://localhost:3000). Sign in with GitHub to tes
 
 ---
 
+## Configuration Notes
+
+**`next.config.ts` uses TypeScript**: Depo's Next.js config file is `next.config.ts`, not `next.config.mjs`. Do not rename it — the ts-jest path alias resolution and TypeScript tooling expect the `.ts` extension.
+
+**GitHub avatar image domain**: `next.config.ts` allowlists `avatars.githubusercontent.com` under `images.domains`. This allows Next.js's `<Image>` component to proxy and optimize GitHub profile pictures. Removing this entry causes avatar images to fail with a Next.js `400` error.
+
+---
+
 ## Deploying to Vercel
 
 Vercel is the recommended deployment target — `vercel.json` is already configured with a 60-second timeout on the delete route for large batches.
