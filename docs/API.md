@@ -8,6 +8,8 @@ Depo exposes four serverless API routes. All routes run server-side and access t
 
 Protected routes require a valid session cookie (`depo_session`). If the session is missing or the token has been revoked, the route returns `401`. Client code should redirect to `/?error=session_expired` on receiving a `401` from any protected route.
 
+**Note on page routes vs. API routes**: requests to `/repos`, `/confirm`, and `/done` are intercepted by Next.js middleware *before* any server component runs. Unauthenticated page requests receive a `307` redirect to `/` and never invoke an API route. The `401` behaviour described below applies specifically to direct calls to `/api/repos` and `/api/delete`.
+
 ---
 
 ## `GET /api/auth/callback`
@@ -74,7 +76,7 @@ Returns the authenticated user's public repositories, sorted by most recently up
 
 **Implementation notes**:
 - Uses Octokit's `paginate` method to fetch all pages automatically (GitHub returns max 100 per page)
-- Fetches only repos of type `owner` with `visibility: 'public'`
+- Fetches only repos of type `owner` with `visibility: 'public'`, sorted by `updated` descending. `per_page: 100` is passed to minimise round trips — `octokit.paginate` accumulates all pages before returning.
 
 ---
 

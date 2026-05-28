@@ -29,7 +29,7 @@ tests/
 ├── unit/
 │   ├── config.test.ts          next.config.ts image domain validation
 │   ├── constants.test.ts       constants values and key uniqueness
-│   ├── generateCommand.test.ts gh and curl command generation (13 cases)
+│   ├── generateCommand.test.ts gh and curl command generation (14 cases)
 │   ├── github.test.ts          createOctokit, listPublicRepos, deleteRepo
 │   ├── session.test.ts         getSession() helper
 │   ├── sessionOptions.test.ts  cookie config properties
@@ -37,10 +37,12 @@ tests/
 │   ├── types.test.ts           Repo / DeletionResult / SessionData conformance
 │   └── vercelJson.test.ts      vercel.json maxDuration for delete route
 └── integration/
-    └── middleware.test.ts      auth redirect behavior (8 cases)
+    └── middleware.test.ts      auth redirect behavior (14 cases)
 ```
 
 **Jest configuration**: `config/jest.config.ts` — rootDir `../`, jsdom environment, ts-jest transform, setup file at `config/jest.setup.ts` (imports `@testing-library/jest-dom`).
+
+**Integration tests** (`tests/integration/`) test cross-cutting behaviour that requires module interaction. `middleware.test.ts` mocks `iron-session` at the module boundary and drives `middleware()` directly with `NextRequest` objects — it does not spin up an HTTP server. The suite covers: authenticated access (no redirect), unauthenticated access (redirect to `/`), corrupted-cookie error path (redirect to `/`), and path-matching precision (e.g., confirming `/repos-test` is not intercepted). The file uses a `@jest-environment node` docblock because Next.js middleware requires Node globals rather than jsdom.
 
 ### Mock Patterns
 
