@@ -71,11 +71,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/?error=auth_failed', request.url))
   }
 
-  const session = await getSession()
-  session.accessToken = accessToken
-  session.login = login
-  session.avatarUrl = avatarUrl
-  await session.save()
+  try {
+    const session = await getSession()
+    session.accessToken = accessToken
+    session.login = login
+    session.avatarUrl = avatarUrl
+    await session.save()
+  } catch (error) {
+    console.error('Session save failed:', error)
+    return NextResponse.redirect(new URL('/?error=auth_failed', request.url))
+  }
 
   const response = NextResponse.redirect(new URL('/repos', request.url))
   response.cookies.delete('depo_oauth_state')
