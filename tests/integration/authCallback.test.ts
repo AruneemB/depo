@@ -62,6 +62,20 @@ describe('GET /api/auth/callback', () => {
     expect(res.headers.get('location')).toContain('error=auth_failed')
   })
 
+  it('redirects to /?error=auth_failed when token exchange throws a network error', async () => {
+    ;(global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'))
+    const res = await GET(makeRequest({ code: 'good', state: 'valid-state' }))
+    expect(res.headers.get('location')).toContain('error=auth_failed')
+  })
+
+  it('redirects to /?error=auth_failed when user profile fetch returns non-ok status', async () => {
+    ;(global.fetch as jest.Mock)
+      .mockResolvedValueOnce({ json: async () => ({ access_token: 'gho_tok' }) })
+      .mockResolvedValueOnce({ ok: false })
+    const res = await GET(makeRequest({ code: 'good', state: 'valid-state' }))
+    expect(res.headers.get('location')).toContain('error=auth_failed')
+  })
+
   it('redirects to /?error=auth_failed when token exchange returns error field', async () => {
     ;(global.fetch as jest.Mock).mockResolvedValueOnce({
       json: async () => ({ error: 'bad_verification_code' }),
