@@ -9,15 +9,23 @@ Depo is a Next.js 14 App Router application deployed as serverless functions on 
 ```
 User
  │
- ├── GET /                    Landing page — generates CSRF nonce, sets depo_oauth_state cookie
+ ├── GET /                    Landing page — renders sign-in UI
  │        │                   Authenticated users are immediately redirected to /repos
  │        │
- │        └── GitHub OAuth ──► GET /api/auth/callback
- │                 (state nonce in URL + cookie)        │
- │                                                      ├── Validates state (CSRF check)
- │                                                      ├── Exchanges code for token
- │                                                      ├── Writes session cookie
- │                                                      └── Deletes depo_oauth_state, redirects ──►
+ │        └── (clicks "Sign in") ──► GET /api/auth/login
+ │                                         │
+ │                                         ├── Generates CSRF nonce
+ │                                         ├── Sets depo_oauth_state cookie
+ │                                         └── 307 redirect ──► GitHub OAuth
+ │                                                                    │
+ │                                          (GitHub redirects back) ──┘
+ │                                                 │
+ │                                          GET /api/auth/callback
+ │                                                 │
+ │                                                 ├── Validates state (CSRF check)
+ │                                                 ├── Exchanges code for token
+ │                                                 ├── Writes session cookie
+ │                                                 └── Deletes depo_oauth_state, redirects ──►
  │
  ├── GET /repos  ──► middleware: validate depo_session cookie
  │        │              │
@@ -43,7 +51,7 @@ User
 
 | Route | Rendering | Purpose |
 |-------|-----------|---------|
-| `/` | Async server component | Landing page: redirects authenticated users to `/repos`; for unauthenticated visitors, generates a CSRF nonce, sets the `depo_oauth_state` cookie, and renders the sign-in UI |
+| `/` | Async server component | Landing page: redirects authenticated users to `/repos`; for unauthenticated visitors, renders the sign-in UI — CSRF nonce generation and cookie writing happen in `GET /api/auth/login` when the user clicks the sign-in link |
 | `/repos` | Server shell + client `<RepoList>` | Fetch repos, multi-select, navigate to confirm |
 | `/confirm` | Client component | Review selection, choose output mode, trigger deletion |
 | `/done` | Client component | Display deletion results, offer sign-out or delete more |
@@ -56,6 +64,7 @@ The server/client split is intentional: pages that need `sessionStorage` or inte
 
 | Method | Route | Auth | Purpose |
 |--------|-------|------|---------|
+| `GET` | `/api/auth/login` | None | Generate CSRF nonce, set `depo_oauth_state` cookie, redirect to GitHub OAuth |
 | `GET` | `/api/auth/callback` | None | Exchange GitHub OAuth code for access token, set session |
 | `GET` | `/api/repos` | Session cookie | Return authenticated user's public repos |
 | `POST` | `/api/delete` | Session cookie | Sequentially delete selected repos with rate-limit delay |
