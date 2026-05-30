@@ -8,25 +8,14 @@ jest.mock('next/navigation', () => ({
   redirect: jest.fn(),
 }))
 
-jest.mock('next/headers', () => ({
-  cookies: jest.fn().mockReturnValue({ set: jest.fn() }),
-}))
-
-jest.mock('crypto', () => ({
-  randomBytes: jest.fn().mockReturnValue({ toString: () => 'deadbeef00112233' }),
-}))
-
-beforeAll(() => {
-  process.env.GITHUB_CLIENT_ID = 'test-client-id'
-  process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000'
-})
-
 import Home from '@/app/page'
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/session'
 
-const mockRedirect = redirect as jest.Mock
-const mockGetSession = getSession as jest.Mock
+// Double-cast required: jest transforms these at runtime but TypeScript only
+// sees the original library types, which don't overlap with jest.Mock.
+const mockRedirect = redirect as unknown as jest.Mock
+const mockGetSession = getSession as unknown as jest.Mock
 
 describe('Landing Page — authenticated redirect', () => {
   it('redirects authenticated users to /repos without rendering the page', async () => {
@@ -45,43 +34,12 @@ describe('Landing Page', () => {
     )
   })
 
-  it('renders the Sign in with GitHub link', async () => {
+  it('renders the Sign in with GitHub link pointing to /api/auth/login', async () => {
     const jsx = await Home({ searchParams: {} })
     render(jsx as React.ReactElement)
     const link = screen.getByRole('link', { name: /sign in with github/i })
     expect(link).toBeInTheDocument()
-    expect(link.getAttribute('href')).toContain('github.com/login/oauth/authorize')
-  })
-
-  it('includes public_repo and delete_repo in the OAuth URL', async () => {
-    const jsx = await Home({ searchParams: {} })
-    render(jsx as React.ReactElement)
-    const link = screen.getByRole('link', { name: /sign in with github/i })
-    const href = link.getAttribute('href') ?? ''
-    expect(href).toContain('scope=public_repo')
-    expect(href).toContain('delete_repo')
-  })
-
-  it('embeds the CSRF state nonce in the OAuth URL', async () => {
-    const jsx = await Home({ searchParams: {} })
-    render(jsx as React.ReactElement)
-    const link = screen.getByRole('link', { name: /sign in with github/i })
-    const href = link.getAttribute('href') ?? ''
-    expect(href).toContain('state=deadbeef00112233')
-  })
-
-  it('sets the depo_oauth_state cookie before rendering', async () => {
-    const { cookies } = await import('next/headers')
-    const mockSet = jest.fn()
-    ;(cookies as jest.Mock).mockReturnValue({ set: mockSet })
-
-    await Home({ searchParams: {} })
-
-    expect(mockSet).toHaveBeenCalledWith(
-      'depo_oauth_state',
-      expect.any(String),
-      expect.objectContaining({ httpOnly: true, sameSite: 'lax' }),
-    )
+    expect(link.getAttribute('href')).toBe('/api/auth/login')
   })
 
   it('mentions delete_repo scope in the privacy note', async () => {
