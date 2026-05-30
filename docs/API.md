@@ -181,10 +181,20 @@ Partial failure is not treated as a total failure — all repos in the batch are
 
 Destroys the session cookie and redirects to the landing page.
 
-**Auth required**: No
+**Auth required**: No — calling signout while already signed out is a safe no-op.
 
-**Request**: No body.
+**Request**: No body or query parameters.
 
-**Response**: Redirects to `/`.
+**Response**: `307` redirect to `NEXT_PUBLIC_APP_URL + '/'`. Falls back to the origin of the incoming request URL if `NEXT_PUBLIC_APP_URL` is absent or not a valid URL string.
 
-**Side effects**: Calls `session.destroy()`, which clears the `depo_session` cookie.
+**Side effects**:
+
+- Calls `session.destroy()`, which overwrites the `depo_session` cookie with an expired, empty value. The GitHub access token stored in the cookie is no longer accessible after this call.
+
+**Error responses**: None. The route does not validate the session before destroying it. An unauthenticated call (no session cookie, or a corrupted cookie) completes without error and redirects to `/`.
+
+**Implementation notes**:
+
+- `session.destroy()` is synchronous in iron-session v8 — it is **not** awaited.
+- The redirect target is constructed via `new URL('/', process.env.NEXT_PUBLIC_APP_URL)`. If that env var is absent or malformed, the `URL` constructor throws a `TypeError`; the route catches this and derives the root from `request.url` instead. `NextResponse.redirect()` in Next.js 14 requires an absolute URL and rejects relative paths, so both code paths always produce a fully-qualified target.
+- Only `POST` is exported — a browser `GET` to `/api/signout` returns `405 Method Not Allowed` (Next.js default). The `SignOutButton` component calls this route via `fetch('/api/signout', { method: 'POST' })`, not via a form submission or anchor link.
