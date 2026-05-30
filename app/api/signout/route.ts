@@ -11,14 +11,23 @@ import { getSession } from '@/lib/session'
  * No authentication check is performed — calling signout while already signed
  * out is a safe no-op: `destroy()` on an empty session is harmless.
  *
- * The redirect target is the absolute root URL derived from `NEXT_PUBLIC_APP_URL`
- * rather than a relative path, ensuring the redirect works correctly in both
- * local development and production deployments behind different base URLs.
+ * The redirect target is built from `NEXT_PUBLIC_APP_URL` when that variable is
+ * present and contains a valid URL. If it is absent or malformed, the route falls
+ * back to the relative path `'/'`, which is always safe regardless of deployment
+ * environment. The try/catch around `new URL()` is necessary because the
+ * constructor throws a `TypeError` when given `undefined` or an invalid string.
  *
- * @returns A `307` redirect to `NEXT_PUBLIC_APP_URL + '/'`.
+ * @returns A `307` redirect to `NEXT_PUBLIC_APP_URL + '/'`, or `'/'` when that
+ *   env var is absent or invalid.
  */
 export async function POST() {
   const session = await getSession()
   session.destroy()
-  return NextResponse.redirect(new URL('/', process.env.NEXT_PUBLIC_APP_URL!))
+  let target: string
+  try {
+    target = new URL('/', process.env.NEXT_PUBLIC_APP_URL).toString()
+  } catch {
+    target = '/'
+  }
+  return NextResponse.redirect(target)
 }
