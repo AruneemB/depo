@@ -40,7 +40,8 @@ tests/
     ├── middleware.test.ts       auth redirect behavior (14 cases)
     ├── authCallback.test.ts    OAuth callback: CSRF validation, env vars, network errors, token exchange, session write (9 cases)
     ├── apiRepos.test.ts        GET /api/repos: unauthenticated, empty list, repo array, revoked-token 401, GitHub 500 (6 cases)
-    └── apiDelete.test.ts       POST /api/delete: auth, validation, sequential deletion, partial failure, error mapping (13 cases)
+    ├── apiDelete.test.ts       POST /api/delete: auth, validation, sequential deletion, partial failure, error mapping (13 cases)
+    └── apiSignout.test.ts      POST /api/signout: session.destroy() call, redirect to /, no-op on empty session (3 cases)
 ```
 
 **Jest configuration**: `config/jest.config.ts` — rootDir `../`, jsdom environment, ts-jest transform, setup file at `config/jest.setup.ts` (imports `@testing-library/jest-dom`).
@@ -54,6 +55,8 @@ tests/
 `apiRepos.test.ts` mocks `@/lib/session` and `@/lib/github` at the module boundary and calls `GET()` directly. The suite covers: the `401` response when no `accessToken` is present in the session; the `200` response with a correctly shaped `Repo[]` array; that `listPublicRepos` receives exactly the `accessToken` from the session; the `401 Session expired` response when GitHub returns a `401` (revoked token); the `500 GitHub API error` response for all other GitHub errors; and the `200 []` response when the user has no public repos.
 
 `apiDelete.test.ts` mocks `@/lib/session`, `@/lib/github`, and `@/lib/constants` (setting `DELETION_DELAY_MS` to `0` so the suite finishes in under 2 seconds). It calls `POST()` directly with `NextRequest` objects. The suite covers: the `401` response when no `accessToken` is in the session; `400` responses for every invalid body shape (non-JSON, missing `repos` key, empty array, array exceeding `MAX_BATCH_SIZE`, non-string entries); that `deleteRepo` is called once per repo with the correct token and session-derived owner; the `{ results }` response shape for an all-success batch; continued execution after a per-repo failure with the failed entry marked `status: "error"`; explicit error-message mapping for HTTP `403` (scope), `404` (not found), and `429` (rate limit); and strict sequential call ordering verified by insertion into a shared array rather than by time.
+
+`apiSignout.test.ts` mocks `@/lib/session` at the module boundary and calls `POST()` directly (no `NextRequest` — the route takes no arguments). `NEXT_PUBLIC_APP_URL` is set to `'http://localhost:3000'` in `beforeEach` and deleted in `afterEach` to keep tests hermetic. The suite covers: that `session.destroy()` is called exactly once; that the response is a `307` redirect to `http://localhost:3000/`; and that the route completes without error when given an already-empty session object (no-op destroy behaviour).
 
 ### Mock Patterns
 
