@@ -12,11 +12,13 @@ interface RepoListProps {
 /**
  * Converts an ISO 8601 timestamp to a compact human-readable relative-time
  * string such as "2d ago" or "3mo ago". Returns "just now" for a null
- * timestamp (repos that have never been pushed to). Uses only integer
- * arithmetic — no external date library required.
+ * timestamp (repos that have never been pushed to), for an unparseable string
+ * (guards against NaN propagation through the arithmetic chain), and for
+ * timestamps fewer than 60 seconds old. Uses only integer arithmetic — no
+ * external date library required.
  *
  * Thresholds (applied in order, earliest match wins):
- * - null / missing → "just now"
+ * - null / missing / unparseable → "just now"
  * - < 60 s   → "just now"
  * - < 60 min → "{N}m ago"
  * - < 24 h   → "{N}h ago"
@@ -26,7 +28,9 @@ interface RepoListProps {
  */
 function relativeTime(iso: string | null): string {
   if (!iso) return 'just now'
-  const diff = Date.now() - new Date(iso).getTime()
+  const ts = new Date(iso).getTime()
+  if (isNaN(ts)) return 'just now'
+  const diff = Date.now() - ts
   const seconds = Math.floor(diff / 1000)
   if (seconds < 60) return 'just now'
   const minutes = Math.floor(seconds / 60)
