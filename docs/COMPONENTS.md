@@ -102,7 +102,7 @@ interface RepoListProps {
 
 **Row elements** (per repo): checkbox, monospace repo name, fork badge (only when `showForks && repo.fork`), star count with `aria-label` (only when `stargazerCount > 0`), truncated description paragraph (omitted when `description` is `null`), relative last-updated time via `relativeTime`.
 
-**`relativeTime(iso: string | null): string`** — module-private pure function. Converts an ISO 8601 timestamp to a human-readable relative string ("2d ago", "3mo ago", etc.). Returns `"just now"` for `null` (repos that have never been pushed to) and for timestamps fewer than 60 seconds old. Thresholds in ascending order: seconds → minutes → hours → days → months → years.
+**`relativeTime(iso: string | null): string`** — module-private pure function. Converts an ISO 8601 timestamp to a human-readable relative string ("2d ago", "3mo ago", etc.). Returns `"just now"` for three cases: `null` (repos that have never been pushed to), an unparseable string (guards against `NaN` propagating through the arithmetic chain — `new Date("garbage").getTime()` returns `NaN`, and without this guard the function would return `"NaNy ago"`), and timestamps fewer than 60 seconds old. The parsed timestamp is captured in a named variable and validated with `isNaN` before any arithmetic occurs. Thresholds in ascending order: seconds → minutes → hours → days → months → years.
 
 ---
 
