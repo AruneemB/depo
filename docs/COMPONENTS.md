@@ -206,17 +206,23 @@ interface ConfirmGateProps {
 | `input` | `string` | `''` | Current value of the confirmation text input |
 | `shaking` | `boolean` | `false` | Drives the `animate-shake` CSS class on the delete button |
 
+**Refs**:
+
+| Ref | Type | Purpose |
+|-----|------|---------|
+| `shakeTimerRef` | `MutableRefObject<ReturnType<typeof setTimeout> \| null>` | Holds the timeout ID for the shake animation so it can be cancelled on unmount |
+
 **Derived**: `confirmed = input === String(count)` — strict string equality; leading or trailing whitespace does not match.
 
 **Behavior**:
 
 - **Label**: "Type {count} to confirm" — the count is rendered in a `<span>` with `font-mono font-semibold` so the number is visually prominent.
 - **Input** (`id="confirm-input"`, `type="text"`, `autoComplete="off"`, `aria-label="Type {count} to confirm"`): bound to `input` state via `onChange`. Width is fixed at `w-32`. Disabled when `loading === true`.
-- **Button (inactive state — `!confirmed`)**: styled `bg-zinc-200 opacity-50 cursor-not-allowed`; `aria-disabled="true"`. Clicking while `!confirmed` calls `setShaking(true)`, schedules `setShaking(false)` via `setTimeout` after 400ms, then returns — `onConfirm` is never called.
+- **Button (inactive state — `!confirmed`)**: styled `bg-zinc-200 opacity-50 cursor-not-allowed`; `aria-disabled="true"`. Clicking while `!confirmed` calls `setShaking(true)`, stores the timeout ID in `shakeTimerRef`, and returns — `onConfirm` is never called.
 - **Button (active state — `confirmed && !loading`)**: styled `bg-red-600 hover:bg-red-700 text-white`; `aria-disabled="false"`. Clicking invokes `onConfirm()` immediately.
 - **Button label**: `Delete {count} repository` (singular when `count === 1`) or `Delete {count} repositories` (plural otherwise).
-- **Loading state** (`loading === true`): both the input and button are HTML-`disabled`. The button body is replaced with an `animate-spin` SVG icon and the text "Deleting…".
-- **Shake animation**: `animate-shake` class is conditionally appended to the button's class list while `shaking === true`. The keyframe is defined in `config/tailwind.config.ts` (0.4s, `ease-in-out`, ±6px horizontal translate). The class is added synchronously on click and cleared by a `setTimeout` callback after 400ms.
+- **Loading state** (`loading === true`): `handleSubmit` returns immediately without calling `onConfirm`, even if invoked programmatically (e.g., `fireEvent.click` in tests bypasses the HTML `disabled` attribute in jsdom). Both the input and button are also HTML-`disabled`. The button body is replaced with an `animate-spin` SVG icon and the text "Deleting…".
+- **Shake animation**: `animate-shake` class is conditionally appended to the button's class list while `shaking === true`. The keyframe is defined in `config/tailwind.config.ts` (0.4s, `ease-in-out`, ±6px horizontal translate). The class is added synchronously on click and cleared by the `setTimeout` callback after 400ms. A `useEffect` cleanup calls `clearTimeout(shakeTimerRef.current)` on unmount so the callback never fires against an unmounted component.
 
 **Accessibility**:
 
