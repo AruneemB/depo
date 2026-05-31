@@ -1,9 +1,11 @@
 jest.mock('@/lib/session', () => ({ getSession: jest.fn() }))
 jest.mock('@/lib/github', () => ({ listPublicRepos: jest.fn() }))
-// jest.mock factories are extracted by babel-plugin-jest-hoist before
-// ts-jest's TypeScript pass, so they must be plain JS. JSX also can't be
-// used since the JSX transform hasn't run yet — use React.createElement.
 jest.mock('@/components/RepoList', () => ({
+  // jest.mock factories are extracted by babel-plugin-jest-hoist before
+  // ts-jest's TypeScript pass, so they must be plain JS with no type
+  // annotations — use React.createElement instead of JSX.
+  // @ts-ignore — 'props' is intentionally untyped; annotations inside
+  // jest.mock factories cause a Babel parse error at hoist extraction time.
   RepoList: (props) =>
     require('react').createElement(
       'div',
@@ -35,7 +37,12 @@ const sampleRepo: Repo = {
 
 beforeEach(() => {
   jest.clearAllMocks()
+  jest.spyOn(console, 'error').mockImplementation(() => {})
   mockGetSession.mockResolvedValue({ accessToken: 'gho_tok', login: 'alice' })
+})
+
+afterEach(() => {
+  jest.restoreAllMocks()
 })
 
 describe('/repos page', () => {
@@ -61,11 +68,16 @@ describe('/repos page', () => {
   })
 
   it('shows error alert when listPublicRepos throws', async () => {
-    mockListPublicRepos.mockRejectedValue(new Error('GitHub API error: 503'))
+    const err = new Error('GitHub API error: 503')
+    mockListPublicRepos.mockRejectedValue(err)
     const jsx = await ReposPage()
     render(jsx as React.ReactElement)
     expect(screen.getByRole('alert')).toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveTextContent('GitHub API error')
+    expect(console.error).toHaveBeenCalledWith(
+      '[ReposPage] listPublicRepos failed',
+      { login: 'alice', error: err },
+    )
   })
 
   it('shows Try again link on error', async () => {
