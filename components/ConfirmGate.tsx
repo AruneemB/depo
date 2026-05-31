@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 /**
  * Props for the ConfirmGate component.
@@ -29,6 +29,10 @@ interface ConfirmGateProps {
  * both the input and the button are disabled and the button label is replaced
  * with a spinning SVG icon and the text "Deleting…".
  *
+ * The shake timeout ID is held in `shakeTimerRef`. A `useEffect` cleanup
+ * cancels any pending timeout on unmount so `setShaking` is never called
+ * against an unmounted component.
+ *
  * Accessibility:
  * - The input carries an explicit `aria-label` of "Type {count} to confirm".
  * - The button carries `aria-disabled={!confirmed}` so screen readers announce
@@ -38,6 +42,16 @@ interface ConfirmGateProps {
 export function ConfirmGate({ count, onConfirm, loading = false }: ConfirmGateProps) {
   const [input, setInput] = useState('')
   const [shaking, setShaking] = useState(false)
+  const shakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (shakeTimerRef.current !== null) {
+        clearTimeout(shakeTimerRef.current)
+        shakeTimerRef.current = null
+      }
+    }
+  }, [])
 
   /** True only when the typed value equals the string representation of count. */
   const confirmed = input === String(count)
@@ -45,14 +59,21 @@ export function ConfirmGate({ count, onConfirm, loading = false }: ConfirmGatePr
   /**
    * Handles the delete-button click.
    *
-   * If the input does not match `count`, the shake animation fires and the
-   * handler returns early — `onConfirm` is never called. If the input matches,
-   * `onConfirm` is called immediately.
+   * Returns immediately when `loading` is true — guards against a programmatic
+   * click bypassing the HTML `disabled` attribute (e.g., via fireEvent in tests
+   * or an assistive technology interaction).
+   *
+   * If the input does not match `count`, the shake animation fires: `shaking` is
+   * set to true and the timeout ID is stored in `shakeTimerRef` so the cleanup
+   * effect can cancel it if the component unmounts before the 400ms elapses.
+   *
+   * If the input matches and the component is not loading, `onConfirm` is called.
    */
   function handleSubmit() {
+    if (loading) return
     if (!confirmed) {
       setShaking(true)
-      setTimeout(() => setShaking(false), 400)
+      shakeTimerRef.current = setTimeout(() => setShaking(false), 400)
       return
     }
     onConfirm()
