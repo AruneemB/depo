@@ -25,6 +25,7 @@ describe('DeleteProgress', () => {
       { repo: 'r2', status: 'error', error: 'Not found' },
     ]
     ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
       json: async () => ({ results }),
     })
     render(<DeleteProgress repos={['r1', 'r2']} onComplete={jest.fn()} />)
@@ -34,7 +35,7 @@ describe('DeleteProgress', () => {
 
   it('shows green checkmark for deleted status', async () => {
     const results: DeletionResult[] = [{ repo: 'r1', status: 'deleted' }]
-    ;(global.fetch as jest.Mock).mockResolvedValue({ json: async () => ({ results }) })
+    ;(global.fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => ({ results }) })
     render(<DeleteProgress repos={['r1']} onComplete={jest.fn()} />)
     await waitFor(() => screen.getByLabelText('Deleted'))
     expect(screen.getByLabelText('Deleted')).toBeInTheDocument()
@@ -42,7 +43,7 @@ describe('DeleteProgress', () => {
 
   it('shows error X and error message for error status', async () => {
     const results: DeletionResult[] = [{ repo: 'r1', status: 'error', error: 'Not found' }]
-    ;(global.fetch as jest.Mock).mockResolvedValue({ json: async () => ({ results }) })
+    ;(global.fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => ({ results }) })
     render(<DeleteProgress repos={['r1']} onComplete={jest.fn()} />)
     await waitFor(() => screen.getByLabelText('Error'))
     expect(screen.getByText('Not found')).toBeInTheDocument()
@@ -51,7 +52,7 @@ describe('DeleteProgress', () => {
   it('calls onComplete with results after API response', async () => {
     const onComplete = jest.fn()
     const results: DeletionResult[] = [{ repo: 'r1', status: 'deleted' }]
-    ;(global.fetch as jest.Mock).mockResolvedValue({ json: async () => ({ results }) })
+    ;(global.fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => ({ results }) })
     render(<DeleteProgress repos={['r1']} onComplete={onComplete} />)
     await waitFor(() => expect(onComplete).toHaveBeenCalledWith(results))
   })
@@ -62,8 +63,29 @@ describe('DeleteProgress', () => {
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument())
   })
 
+  it('shows error alert when response is not ok', async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: false,
+      json: async () => ({ error: 'Not authenticated' }),
+    })
+    render(<DeleteProgress repos={['r1']} onComplete={jest.fn()} />)
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument())
+    expect(screen.getByRole('alert')).toHaveTextContent('Not authenticated')
+  })
+
+  it('does not call onComplete when response is not ok', async () => {
+    const onComplete = jest.fn()
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: false,
+      json: async () => ({ error: 'Server error' }),
+    })
+    render(<DeleteProgress repos={['r1']} onComplete={onComplete} />)
+    await waitFor(() => screen.getByRole('alert'))
+    expect(onComplete).not.toHaveBeenCalled()
+  })
+
   it('calls POST /api/delete with the repos array', async () => {
-    ;(global.fetch as jest.Mock).mockResolvedValue({ json: async () => ({ results: [] }) })
+    ;(global.fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => ({ results: [] }) })
     render(<DeleteProgress repos={['a', 'b']} onComplete={jest.fn()} />)
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith(
       '/api/delete',
